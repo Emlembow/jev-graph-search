@@ -1,6 +1,6 @@
 {
   "name": "jevgraph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Evidence-preserving graph inspection and Jev-assisted retrieval for local snapshots and Notion handoffs.",
   "type": "module",
   "license": "UNLICENSED",

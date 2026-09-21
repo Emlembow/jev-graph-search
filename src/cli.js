@@ -8,7 +8,7 @@ import {
   saveCredentials,
 } from './config.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.1';
 
 const VALUE_OPTIONS = new Set([
   'input', 'output', 'limit', 'candidates', 'candidate-limit', 'max-chars',
