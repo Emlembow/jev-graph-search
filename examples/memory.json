@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "example-memory",
+  "source_format": "local-json",
+  "inventory_complete": true,
+  "inventory_scope": "three example pages",
+  "pages": [
+    {
+      "id": "project",
+      "title": "Project memory",
+      "content": "Decisions and operating notes for a small application.",
+      "links": [{ "target": "database-decision", "relation": "decision", "evidence": "Project links to the database decision." }]
+    },
+    {
+      "id": "database-decision",
+      "title": "Why PostgreSQL?",
+      "content": "We chose PostgreSQL because we need transactions and SQL joins. The team already operates PostgreSQL, which reduces maintenance work.",
+      "links": [{ "target": "database-backups", "relation": "runbook", "evidence": "The database decision links to its backup procedure." }]
+    },
+    {
+      "id": "database-backups",
+      "title": "Database backups",
+      "content": "Back up the database daily and verify restoration each month. Keep the restoration instructions with the database decision.",
+      "links": [{ "target": "database-decision", "relation": "context", "evidence": "The backup procedure links to the database decision." }]
+    }
+  ]
+}

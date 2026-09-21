@@ -1,0 +1,49 @@
+{
+  "name": "jevgraph",
+  "version": "0.1.0",
+  "description": "Evidence-preserving graph inspection and Jev-assisted retrieval for local snapshots and Notion handoffs.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "private": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "jevgraph": "./bin/jevgraph.js"
+  },
+  "exports": {
+    ".": "./src/cli.js",
+    "./config": "./src/config.js",
+    "./graph": "./src/graph.js",
+    "./jev": "./src/jev.js",
+    "./cache": "./src/cache.js",
+    "./retrieval": "./src/retrieval.js",
+    "./notion": "./src/notion.js",
+    "./skill": "./skills/jevgraph/SKILL.md",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "src",
+    "skills",
+    "docs",
+    "examples",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Emlembow/jevgraph.git"
+  },
+  "homepage": "https://github.com/Emlembow/jevgraph#readme",
+  "bugs": {
+    "url": "https://github.com/Emlembow/jevgraph/issues"
+  },
+  "keywords": [
+    "jev",
+    "graph",
+    "agent-memory",
+    "notion",
+    "agent-skill",
+    "cli"
+  ]
+}
