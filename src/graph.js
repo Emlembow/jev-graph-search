@@ -11,26 +11,28 @@ const stripCode = content => content.replace(/^\s*(`{3,}|~{3,})[^\n]*\n[\s\S]*?^
 const norm = value => String(value).normalize('NFKC').trim().replace(/\\/g, '/').replace(/\.md$/i, '').replace(/_/g, ' ').replace(/\s+/g, ' ').toLocaleLowerCase('en');
 const bounded = (value, name, min, max) => { if (!Number.isInteger(value) || value < min || value > max) fail(`${name} must be an integer between ${min} and ${max}`); return value; };
 
-function notionId(value) {
-  if (typeof value !== 'string') return null;
-  let candidate = value;
-  if (/^https?:/i.test(value)) {
-    let url; try { url = new URL(value); } catch { return null; }
-    if (!/(^|\.)notion\.(so|com|site)$/i.test(url.hostname)) return null;
-    candidate = url.pathname.split('/').filter(Boolean).at(-1) || '';
-  }
-  const match = candidate.match(/(?:^|[^a-f0-9])([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|[a-f0-9]{32})$/i);
-  return match ? match[1].replace(/-/g, '').toLowerCase() : null;
-}
-function identityKey(value) { return notionId(value) || String(value).trim(); }
+function identityKey(value) { return String(value).trim(); }
 function aliasKey(value) {
-  if (notionId(value)) return notionId(value);
   if (/^https?:\/\//i.test(String(value))) { try { const u = new URL(value); u.hash = ''; return u.toString().replace(/\/$/, ''); } catch {} }
   return norm(String(value).split('#')[0].split('^')[0]);
 }
+function splitValues(value) {
+  const values = [];
+  let start = 0, quote = '', depth = 0;
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (quote) { if (char === quote && value[i - 1] !== '\\') quote = ''; }
+    else if ((char === '"' || char === "'") && !value.slice(start, i).trim()) quote = char;
+    else if (char === '[') depth++;
+    else if (char === ']') depth--;
+    else if (char === ',' && depth === 0) { values.push(value.slice(start, i).trim()); start = i + 1; }
+  }
+  values.push(value.slice(start).trim());
+  return values.filter(Boolean);
+}
 function scalar(value) {
   const clean = value.trim();
-  if (/^\[.*\]$/.test(clean)) return clean.slice(1, -1).split(',').map(x => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+  if (/^\[(?!\[).*\]$/.test(clean)) return splitValues(clean.slice(1, -1)).map(scalar);
   if (clean === 'true' || clean === 'false') return clean === 'true';
   return clean.replace(/^['"]|['"]$/g, '');
 }
@@ -38,32 +40,41 @@ function parseFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!match) return { body: content, properties: {} };
   const properties = {};
+  let listKey;
   for (const line of match[1].split(/\r?\n/)) {
     const entry = line.match(/^([^\s:#][^:]*):\s*(.*)$/);
-    if (entry) properties[entry[1].trim()] = scalar(entry[2]);
+    if (entry) {
+      listKey = entry[2].trim() === '' ? entry[1].trim() : undefined;
+      properties[entry[1].trim()] = listKey ? [] : scalar(entry[2]);
+    } else if (listKey && /^\s*-\s+/.test(line)) {
+      properties[listKey].push(scalar(line.replace(/^\s*-\s+/, '')));
+    } else if (line.trim() && !/^\s*#/.test(line)) listKey = undefined;
   }
   return { body: content.slice(match[0].length), properties };
 }
 function list(value) { return Array.isArray(value) ? value.map(String) : typeof value === 'string' ? [value] : []; }
+function propertyList(value) {
+  const parsed = typeof value === 'string' ? scalar(value) : value;
+  const values = Array.isArray(parsed) ? parsed : list(value).flatMap(splitValues);
+  return values.map(value => String(scalar(String(value))).replace(/^\[\[([\s\S]*)\]\]$/, '$1').trim()).filter(Boolean);
+}
 function relationTargets(value) {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.flatMap(relationTargets);
   if (!value || typeof value !== 'object') return [];
   if (value.relation) return relationTargets(value.relation);
-  for (const key of ['target', 'id', 'url', 'notion_url', 'title']) if (typeof value[key] === 'string') return [value[key]];
+  for (const key of ['target', 'id', 'url', 'title']) if (typeof value[key] === 'string') return [value[key]];
   return [];
 }
 function extractLinks(content, properties) {
-  const body = stripCode(content);
+  const body = stripCode(content).replace(/^alias(?:es)?::.*$/gm, '');
   const links = [];
   const add = (target, relation, evidence, source) => { if (target?.trim()) links.push({ target: target.trim(), relation, evidence, source }); };
   for (const match of body.matchAll(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g)) add(match[1].split('#')[0].split('^')[0], 'link', match[0], 'wikilink');
   for (const match of body.matchAll(/\[[^\]]*\]\(<?([^\s)>]+)>?(?:\s+["'][^)]*)?\)/g)) {
     const target = match[1];
-    if (!/^\w+:\/\//.test(target) || notionId(target)) add(target.split('#')[0], 'link', match[0], 'markdown-link');
+    add(target.split('#')[0], 'link', match[0], 'markdown-link');
   }
-  for (const match of body.matchAll(/<page\b[^>]*\burl=["']([^"']+)["'][^>]*>([^<]*)<\/page>/gi)) add(match[1], 'child', match[0], 'notion-page-tag');
-  for (const match of body.matchAll(/https?:\/\/(?:[\w.-]+\.)?notion\.(?:so|com|site)\/[^\s<>"')\]]+/gi)) add(match[0].replace(/[.,;:]+$/, ''), 'link', match[0], 'notion-url');
   let heading = null;
   for (const line of body.split(/\r?\n/)) {
     const h = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*$/);
@@ -80,22 +91,26 @@ function extractLinks(content, properties) {
   }
   return links;
 }
-function normalizePage(item, index, notion) {
+function normalizePage(item, index) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) fail(`pages[${index}] must be an object`);
-  for (const field of ['id','url','notion_url','title','name','content','source_path','path']) if (item[field] !== undefined && item[field] !== null && typeof item[field] !== 'string') fail(`pages[${index}].${field} must be a string`);
+  for (const field of ['id','url','title','name','content','source_path','path']) if (item[field] !== undefined && item[field] !== null && typeof item[field] !== 'string') fail(`pages[${index}].${field} must be a string`);
   if (item.properties != null && (typeof item.properties !== 'object' || Array.isArray(item.properties))) fail(`pages[${index}].properties must be an object`);
   for (const field of ['links','unsupported_features']) if (item[field] != null && !Array.isArray(item[field])) fail(`pages[${index}].${field} must be an array`);
   for (const field of ['tags','aliases']) if (item[field] != null && !Array.isArray(item[field]) && typeof item[field] !== 'string') fail(`pages[${index}].${field} must be a string or array`);
   const parsed = parseFrontmatter(item.content || '');
   const properties = { ...parsed.properties, ...item.properties };
-  for (const match of stripCode(parsed.body).matchAll(/^\s*([^:#\n][^:\n]*?)::\s*(.*?)\s*$/gm)) if (!(match[1].trim() in properties)) properties[match[1].trim()] = scalar(match[2]);
+  // Unindented page properties are metadata; indented block properties remain
+  // source text and must not override their containing page's tags or aliases.
+  for (const match of stripCode(parsed.body).matchAll(/^([^\s:#-][^:\n]*?)::[ \t]*(.*)$/gm)) {
+    const key = match[1].trim();
+    if (!(key in properties)) properties[key] = ['alias', 'aliases', 'tags'].includes(key) ? propertyList(match[2]) : scalar(match[2]);
+  }
   const sourcePath = item.source_path || item.path || '';
-  const title = item.title || item.name || text(properties.title) || parsed.body.match(/^#\s+(.+)$/m)?.[1] || (sourcePath ? path.basename(sourcePath, '.md') : `Untitled ${index + 1}`);
-  const stable = item.id || item.url || item.notion_url;
-  if (notion && !stable?.trim()) fail(`pages[${index}] in a Notion snapshot requires a stable id or URL`);
+  const title = item.title || item.name || text(properties.title) || parsed.body.match(/^#\s+(.+)$/m)?.[1] || (sourcePath ? path.basename(sourcePath).replace(/\.md$/i, '') : `Untitled ${index + 1}`);
+  const stable = item.id || item.url;
   if (!stable && !sourcePath) fail(`pages[${index}] requires an id, URL or source_path; titles are not stable identifiers`);
   const id = stable ? identityKey(stable) : `local:${digest(sourcePath.replace(/\\/g, '/')).slice(0, 24)}`;
-  const tags = [...list(properties.tags), ...list(item.tags), ...[...stripCode(parsed.body).matchAll(/(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_/-]*)/gu)].map(x => x[1])];
+  const tags = [...list(properties.tags), ...list(item.tags), ...[...stripCode(parsed.body).matchAll(/(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_/-]*)/gu)].map(x => x[1]), ...[...stripCode(parsed.body).matchAll(/(?:^|\s)#\[\[([^\]]+)\]\]/g)].map(x => x[1])];
   const unsupported = list(item.unsupported_features);
   if (/\(\([^)]+\)\)/.test(parsed.body)) unsupported.push('block-references');
   if (/<table\b/i.test(parsed.body)) unsupported.push('table-links-require-explicit-snapshot');
@@ -107,7 +122,7 @@ function normalizePage(item, index, notion) {
     if (typeof target !== 'string' || !target.trim()) fail(`pages[${index}].links requires a target`);
     links.push({ target, relation: text(link.relation) || 'link', evidence: text(link.evidence) || `Explicit snapshot target: ${target}`, source: text(link.source) || 'snapshot-link' });
   }
-  return { ...item, id, title, url: item.url || item.notion_url || null, source_path: sourcePath || id, source_kind: item.source_kind || (notion ? 'notion' : 'local'), content: parsed.body, properties, tags: sorted(new Set(tags.map(x => x.replace(/^#/, '')))), aliases: sorted(new Set([...list(properties.aliases), ...list(item.aliases)])), kind: item.kind || 'page', parent: item.parent ?? (sourcePath ? path.posix.dirname(sourcePath) : null), database: item.database || item.database_id || null, data_source: item.data_source || item.data_source_url || null, links, unsupported_features: sorted(new Set(unsupported)), content_digest: digest(parsed.body) };
+  return { ...item, id, title, url: item.url || null, source_path: sourcePath || id, source_kind: item.source_kind || 'local', content: parsed.body, properties, tags: sorted(new Set(tags.map(x => x.replace(/^#/, '')))), aliases: sorted(new Set([...list(properties.aliases), ...list(properties.alias), ...list(item.aliases)])), kind: item.kind || 'page', parent: item.parent ?? (sourcePath ? path.posix.dirname(sourcePath) : null), database: item.database || item.database_id || null, data_source: item.data_source || item.data_source_url || null, links, unsupported_features: sorted(new Set(unsupported)), content_digest: digest(parsed.body) };
 }
 function resolver(pages) {
   const exact = new Map(), aliases = new Map();
@@ -134,9 +149,7 @@ export function buildGraph(snapshot, options = {}) {
   if (!snapshot || typeof snapshot !== 'object' || !Array.isArray(snapshot.pages)) fail('Snapshot must be an object with a pages array');
   if (snapshot.schema_version != null && snapshot.schema_version !== 1) fail('Unsupported snapshot schema_version; expected 1');
   const sourceFormat = snapshot.source_format || 'json';
-  const notion = /^notion(?:-|$)/i.test(sourceFormat);
-  if (notion && typeof snapshot.inventory_complete !== 'boolean') fail('Notion snapshots require boolean inventory_complete');
-  const pages = snapshot.pages.map((page, i) => normalizePage(page, i, notion)).sort((a,b) => a.id.localeCompare(b.id));
+  const pages = snapshot.pages.map((page, i) => normalizePage(page, i)).sort((a,b) => a.id.localeCompare(b.id));
   const seen = new Set(); for (const page of pages) { if (seen.has(page.id)) fail(`Duplicate page ID: ${page.id}`); seen.add(page.id); }
   const metadataWarnings=[...(snapshot.warnings||[])], ids=new Map(pages.map(p=>[identityKey(p.id),p.id])), urlOwners=new Map();
   for(const page of pages)if(page.url){const key=identityKey(page.url);const owner=ids.get(key);if(owner&&owner!==page.id)metadataWarnings.push('A page URL conflicts with another stable page ID; exact IDs take precedence.');const owners=urlOwners.get(key)||new Set();owners.add(page.id);urlOwners.set(key,owners);}
@@ -146,6 +159,9 @@ export function buildGraph(snapshot, options = {}) {
   for (const page of pages) for (const link of page.links) {
     const result = resolve(link.target, page);
     if (!result.id) {
+      // External Markdown destinations stay in source content; only supplied
+      // pages can turn those URLs into local graph edges. Never fetch them.
+      if (!result.candidates && link.source === 'markdown-link' && /^[a-z][a-z\d+.-]*:/i.test(link.target)) continue;
       const key = `${page.id}\0${link.target}`;
       if (!missingKeys.has(key)) { missingKeys.add(key); const row = { from: page.id, target: link.target, evidence: link.evidence }; if (result.candidates) ambiguous.push({ ...row, candidates: result.candidates }); else unresolved.push(row); }
       continue;
@@ -164,6 +180,14 @@ export async function loadGraph(inputPath, options = {}) {
   const info = await stat(inputPath);
   if (!info.isDirectory()) return buildGraph(JSON.parse(await readFile(inputPath, 'utf8')), options);
   const pages = [];
+  const rootEntries = await readdir(inputPath, { withFileTypes: true });
+  const rootDirectories = new Set(rootEntries.filter(entry => entry.isDirectory()).map(entry => entry.name));
+  const fileGraph = rootDirectories.has('logseq') && (rootDirectories.has('pages') || rootDirectories.has('journals'));
+  let databaseFile = rootEntries.some(entry => entry.isFile() && /^db\.sqlite(?:3)?$/i.test(entry.name));
+  if (rootDirectories.has('logseq')) {
+    const metadataEntries = await readdir(path.join(inputPath, 'logseq'), { withFileTypes: true });
+    databaseFile ||= metadataEntries.some(entry => entry.isFile() && /^db\.sqlite(?:3)?$/i.test(entry.name));
+  }
   async function walk(dir) {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries.sort((a,b) => a.name.localeCompare(b.name))) {
@@ -173,8 +197,11 @@ export async function loadGraph(inputPath, options = {}) {
       else if (entry.isFile() && /\.md$/i.test(entry.name)) pages.push({ source_path: path.relative(inputPath, file).split(path.sep).join('/'), content: await readFile(file, 'utf8') });
     }
   }
-  await walk(inputPath);
-  return buildGraph({ schema_version: 1, source_format: 'markdown', inventory_complete: true, inventory_scope: 'supplied-directory', pages }, options);
+  if (fileGraph) {
+    for (const directory of ['pages', 'journals']) if (rootDirectories.has(directory)) await walk(path.join(inputPath, directory));
+  } else await walk(inputPath);
+  if (databaseFile && !pages.length) fail('Database graphs are not supported; point --input to a local Markdown folder or file graph.');
+  return buildGraph({ schema_version: 1, source_format: 'markdown', inventory_complete: true, inventory_scope: fileGraph ? 'supplied-pages-and-journals' : 'supplied-directory', pages }, options);
 }
 function adjacency(graph) {
   const outgoing = new Map(graph.pages.map(p => [p.id, new Set()])), incoming = new Map(graph.pages.map(p => [p.id,new Set()]));

@@ -2,9 +2,9 @@
 
 **Find the right evidence in your agent's memory graph.**
 
-A CLI and agent skill for searching local documents and Notion snapshots with [Jev](https://docs.typesafe.ai/introduction). Results keep the original source passages and citations.
+A CLI and agent skill for searching local Markdown knowledge graphs and optional JSON snapshots with [Jev](https://docs.typesafe.ai/introduction). Results keep the original source passages and citations.
 
-[Get started](#get-started) · [Agent skill](#agent-skill) · [Notion](#notion) · [Documentation](#documentation)
+[Get started](#get-started) · [Obsidian and Logseq](#obsidian-and-logseq) · [Agent skill](#agent-skill) · [Documentation](#documentation)
 
 ![Tax-code benchmark: source recall without versus with Jev is 33.2% versus 73.2% at top 1, 53.5% versus 80.1% at top 3, and 63.9% versus 81.8% at top 5.](assets/readme/retrieval-quality.png)
 
@@ -26,21 +26,21 @@ Requires **Node.js 20+** and npm. Git is needed for the example checkout and ski
 Run the exact npm release:
 
 ```sh
-npx --yes --package=jevgraph@0.1.1 jevgraph setup
+npx --yes --package=jevgraph@0.2.0 jevgraph setup
 ```
 
 Use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API key into the hidden prompt. Your key is saved in a private per-user configuration file, outside the graph.
 
-Search a directory of Markdown files or a [JSON snapshot](docs/schema.md):
+Search a directory of Markdown files or an optional [JSON graph snapshot](docs/schema.md):
 
 ```sh
-npx --yes --package=jevgraph@0.1.1 jevgraph search "Why did we choose this database?" --input ./memory
+npx --yes --package=jevgraph@0.2.0 jevgraph search "Why did we choose this database?" --input ./ObsidianVault
 ```
 
 For a persistent `jevgraph` command:
 
 ```sh
-npm install --global jevgraph@0.1.1
+npm install --global jevgraph@0.2.0
 jevgraph --help
 ```
 
@@ -50,10 +50,10 @@ The release workflow publishes exact package versions with npm trusted publishin
 <summary>Try the included example without a key</summary>
 
 ```sh
-git clone --branch v0.1.1 --depth 1 https://github.com/Emlembow/jevgraph.git
+git clone --branch v0.2.0 --depth 1 https://github.com/Emlembow/jevgraph.git
 cd jevgraph
-jevgraph search "Why PostgreSQL?" --input examples/memory.json --offline
-jevgraph audit --input examples/memory.json
+node bin/jevgraph.js search "Why PostgreSQL?" --input examples/memory.json --offline
+node bin/jevgraph.js audit --input examples/memory.json
 ```
 
 `--offline` uses local lexical ranking. Remove it after setup to use Jev.
@@ -66,40 +66,55 @@ jevgraph audit --input examples/memory.json
 npx skills add Emlembow/jevgraph --skill jevgraph
 ```
 
-The [skill](skills/jevgraph/SKILL.md) teaches an agent how to retrieve evidence, inspect links, propose memory destinations, and handle Notion snapshots. It invokes the CLI above. Skill installation does not configure API keys or connect Notion.
+The [skill](skills/jevgraph/SKILL.md) teaches an agent how to retrieve evidence from local Markdown graphs or JSON snapshots, inspect links, and propose memory destinations. It invokes the CLI above. Skill installation does not configure API keys or read your files.
 
 ## Commands
 
 After installing the CLI:
 
 ```sh
-# Retrieve source passages
-jevgraph search "What did we decide?" --input ./memory
+# Retrieve source passages from an Obsidian vault
+jevgraph search "What did we decide?" --input ./ObsidianVault
 
 # Propose where a new memory belongs
-jevgraph place "We chose PostgreSQL for transactions" --input ./memory
+jevgraph place "We chose PostgreSQL for transactions" --input ./ObsidianVault
 
 # Audit explicit structure; add --semantic for Jev suggestions
-jevgraph audit --input ./memory
+jevgraph audit --input ./ObsidianVault
 
-# Follow existing links without a provider key
+# Follow existing links in an optional JSON snapshot without a provider key
 jevgraph traverse --input snapshot.json --from PAGE_A --to PAGE_B
 ```
 
 Search finds lexical candidates and bounded graph neighbors, then Jev reranks them. Exact source evidence is retained. `place` and migration commands propose changes; they do not write to your graph. Use `jevgraph --help` for all commands.
 
-## Notion
+## Obsidian and Logseq
 
-**Already have Notion MCP connected?** Ask your agent to fetch the relevant pages, content, and relations, then export a [normalized snapshot](docs/schema.md). Jevgraph searches that local file. It does not inherit the MCP host's OAuth credentials.
+Point `--input` at a local Markdown directory. Obsidian vaults are read recursively, including nested folders. Logseq graphs are supported through their Markdown `pages/` and `journals/` files; database and Org-mode formats are outside this interface. Hidden paths and symbolic links are skipped. Jevgraph reads the graph and does not create a backup or export.
 
-**Using Notion directly?** Supply `NOTION_TOKEN` in your environment, then run:
+Common page metadata works in either graph style:
 
-```sh
-jevgraph notion snapshot --ids PAGE_ID --output snapshot.json
-jevgraph search "What did we decide?" --input snapshot.json
+```markdown
+---
+aliases: [Database decision, PostgreSQL decision]
+tags: [architecture, storage]
+---
+# Database decision
+
+## Related
+- [[Transactions]]
+See also [Migration notes](../projects/migration-notes.md)
 ```
 
-The Notion adapter is read-only. Missing permissions, truncated content, and incomplete scope remain visible as warnings. [Notion setup and MCP handoff →](docs/notion.md)
+Top-level YAML `aliases` and `tags` lists, plus unindented Logseq `alias::` and `tags::` page-property lines, are indexed as page-level metadata. Indented block-property lines remain page content. Wikilinks and relative Markdown links become explicit graph evidence.
+
+```sh
+# Obsidian
+jevgraph search "database decision" --input ./ObsidianVault --offline
+
+# Logseq Markdown graph
+jevgraph audit --input ./logseq-graph --offline
+```
 
 ## Configuration
 
@@ -113,9 +128,8 @@ Keys are never accepted as command-line arguments. Saved credentials use a `0600
 
 ## Documentation
 
-- [Graph snapshot format and Markdown inputs](docs/schema.md)
+- [Local graph schema and Markdown inputs](docs/schema.md)
 - [Provider setup and credential storage](docs/setup.md)
-- [Notion REST and MCP handoff](docs/notion.md)
 
 Jev ranks a bounded candidate set; it cannot recover missing candidates or prove that evidence is sufficient. Model suggestions are not observed graph links. Partial snapshots remain partial. The current default does not guarantee no-answer rejection.
 

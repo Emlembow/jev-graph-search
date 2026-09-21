@@ -1,7 +1,7 @@
 {
   "name": "jevgraph",
-  "version": "0.1.1",
-  "description": "Evidence-preserving graph inspection and Jev-assisted retrieval for local snapshots and Notion handoffs.",
+  "version": "0.2.0",
+  "description": "Evidence-preserving graph inspection and Jev-assisted retrieval for local Markdown, Obsidian vaults, and Logseq Markdown graphs.",
   "type": "module",
   "license": "UNLICENSED",
   "private": false,
@@ -22,7 +22,6 @@
     "./jev": "./src/jev.js",
     "./cache": "./src/cache.js",
     "./retrieval": "./src/retrieval.js",
-    "./notion": "./src/notion.js",
     "./skill": "./skills/jevgraph/SKILL.md",
     "./package.json": "./package.json"
   },
@@ -45,8 +44,10 @@
   "keywords": [
     "jev",
     "graph",
+    "obsidian",
+    "logseq",
+    "markdown",
     "agent-memory",
-    "notion",
     "agent-skill",
     "cli"
   ]

@@ -8,9 +8,13 @@ const terms = value => [...new Set(tokens(value).filter(t => !stop.has(t)))];
 const defaultCache = new Map();
 const checkInt = (value,name,min,max) => { if(!Number.isInteger(value)||value<min||value>max) throw new Error(`${name} must be an integer between ${min} and ${max}`); };
 const clientIds = new WeakMap(); let nextClientId = 0;
+function pageLabel(page) {
+  const aliases=(page.aliases || []).slice(0,16).map(alias=>String(alias).slice(0,256)).join('; ').slice(0,512);
+  return `Title: ${page.title.slice(0,512)}${aliases ? `\nAliases: ${aliases}` : ''}`;
+}
 function namespace(jev) { if(jev.cacheNamespace) return jev.cacheNamespace; if(!clientIds.has(jev)) clientIds.set(jev,++nextClientId); return `client:${clientIds.get(jev)}`; }
 function candidates(graph,query,limit) {
-  const queryTerms=terms(query), corpus=graph.pages.map(p=>({page:p,words:tokens(`${p.title} ${p.tags.join(' ')} ${p.content}`)}));
+  const queryTerms=terms(query), corpus=graph.pages.map(p=>({page:p,words:tokens(`${p.title} ${(p.aliases || []).join(' ')} ${p.tags.join(' ')} ${p.content}`)}));
   const average=corpus.reduce((n,d)=>n+d.words.length,0)/Math.max(1,corpus.length), frequency=new Map();
   for(const doc of corpus) for(const word of new Set(doc.words)) frequency.set(word,(frequency.get(word)||0)+1);
   const ranked=corpus.map(({page,words})=>{
@@ -21,6 +25,7 @@ function candidates(graph,query,limit) {
       const idf=Math.log(1+(corpus.length-df+.5)/(df+.5));
       if(tf) score+=idf*(tf*2.2)/(tf+1.2*(.25+.75*words.length/Math.max(1,average)));
       if(tokens(page.title).includes(term)) score+=idf*1.7;
+      if((page.aliases || []).some(alias=>tokens(alias).includes(term))) score+=idf*1.2;
       if(page.tags.some(tag=>tokens(tag).includes(term))) score+=idf*.8;
     }
     return {page,lexical_score:score,candidate_source:'lexical'};
@@ -95,7 +100,7 @@ export async function retrieve(graph,query,{limit=5,candidateLimit=20,maxChars=6
   });
   let semantics={response:{usage:{input_tokens:0,output_tokens:0,cost:0},requests:0,model:null,provider:null},hits:0};
   if(useJev&&rows.length) {
-    semantics=await score(jev,rows.map(r=>({id:r.id,query,text:`Title: ${r.title.slice(0,512)}\n${r.excerpt}`,content_digest:r.content_digest})),{purpose,cache,signal,cacheTtlMs});
+    semantics=await score(jev,rows.map((r,index)=>({id:r.id,query,text:`${pageLabel(shortlist[index].page)}\n${r.excerpt}`,content_digest:r.content_digest})),{purpose,cache,signal,cacheTtlMs});
     for(const row of rows)row.score=semantics.scores.get(row.id);
     rows.sort((a,b)=>b.score-a.score||b.lexical_score-a.lexical_score||a.id.localeCompare(b.id));
   } else rows.sort((a,b)=>b.lexical_score-a.lexical_score||a.id.localeCompare(b.id));
@@ -138,12 +143,12 @@ export async function semanticAudit(graph,{jev,mode='required',offline=false,max
   if(!useJev)return {structural,semantic:{status:'skipped-offline',suggestions:[],observed_edges_changed:false,metrics:{jev_requests:0}}};
   const weakIds=new Set(structural.weakly_linked_pages.map(p=>p.id)),pairs=[],pairKeys=new Set(),byId=new Map(graph.pages.map(p=>[p.id,p]));
   for(const page of graph.pages.filter(p=>weakIds.has(p.id))) {
-    const query=`${page.title.slice(0,512)}\n${page.content.slice(0,1200)}`;
+    const query=`${pageLabel(page)}\n${page.content.slice(0,1200)}`;
     for(const candidate of candidates(graph,query,Math.min(6,graph.pages.length))) {
       const other=candidate.page;
       if(other.id===page.id||graph.edges.some(e=>(e.from===page.id&&e.to===other.id)||(e.to===page.id&&e.from===other.id)))continue;
       const key=[page.id,other.id].sort().join('\0');if(pairKeys.has(key))continue;
-      pairKeys.add(key);pairs.push({id:`pair_${pairs.length}`,query,text:`${other.title.slice(0,512)}\n${sourceWindow(other,query,1200).text}`,content_digest:hash(page.content+'\0'+other.content),from:page.id,to:other.id});if(pairs.length>=maxPairs)break;
+      pairKeys.add(key);pairs.push({id:`pair_${pairs.length}`,query,text:`${pageLabel(other)}\n${sourceWindow(other,query,1200).text}`,content_digest:hash(page.content+'\0'+other.content),from:page.id,to:other.id});if(pairs.length>=maxPairs)break;
     }
     if(pairs.length>=maxPairs)break;
   }

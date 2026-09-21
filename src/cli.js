@@ -8,21 +8,22 @@ import {
   saveCredentials,
 } from './config.js';
 
-export const VERSION = '0.1.1';
+export const VERSION = '0.2.0';
 
 const VALUE_OPTIONS = new Set([
   'input', 'output', 'limit', 'candidates', 'candidate-limit', 'max-chars',
   'from', 'to', 'max-hops', 'max-visited', 'page-types', 'min-links', 'min-outgoing',
-  'plan', 'ids', 'query', 'max-pages', 'max-blocks', 'max-depth',
-  'data-source-ids', 'provider', 'model',
+  'plan', 'provider', 'model',
 ]);
 const BOOLEAN_OPTIONS = new Set(['help', 'version', 'offline', 'semantic', 'from-env', 'no-cache']);
 const SECRET_OPTION = /(?:api[-_]?key|token|secret|password)/i;
 
 export const HELP = `jevgraph ${VERSION}
 
-Offline graph inspection is local and key-free. Semantic search, placement,
-and semantic audit require a configured Jev provider unless --offline is set.
+Read local Markdown folders directly, including Obsidian vaults and Logseq
+Markdown graphs. JSON snapshots are optional. Offline inspection is key-free.
+Semantic search, placement, and semantic audit require a configured Jev provider
+unless --offline is set.
 
 Commands:
   jevgraph audit --input PATH [--semantic] [--offline]
@@ -33,8 +34,6 @@ Commands:
   jevgraph analysis-health --input PATH [--page-types a,b --min-outgoing N]
   jevgraph migration-plan --input PATH [--output FILE]
   jevgraph verify-migration --plan FILE --input TARGET_SNAPSHOT
-  jevgraph notion search QUERY [--limit N]
-  jevgraph notion snapshot [--ids ID,ID | --query QUERY] [--data-source-ids ID,ID] [--output FILE]
   jevgraph setup [--provider typesafe|openrouter] [--from-env]
   jevgraph config
   jevgraph doctor
@@ -59,7 +58,6 @@ const COMMAND_HELP = {
   'analysis-health': 'jevgraph analysis-health --input PATH [--page-types a,b --min-outgoing N]\nCheck explicitly tagged analysis, strategy, and assessment pages.',
   'migration-plan': 'jevgraph migration-plan --input PATH [--output FILE]\nCreate a deterministic proposal; no target writes occur.',
   'verify-migration': 'jevgraph verify-migration --plan FILE --input TARGET_SNAPSHOT\nVerify a target snapshot against a migration proposal.',
-  notion: 'jevgraph notion search QUERY [--limit N]\njevgraph notion snapshot [--ids ID,ID | --query QUERY] [--data-source-ids ID,ID] [--output FILE]\nRead through a caller-provided Notion token; no writes or inherited OAuth.',
   setup: 'jevgraph setup [--provider typesafe|openrouter] [--from-env]\nPersist a hidden key prompt or an already-exported provider key.',
   config: 'jevgraph config\nPrint redacted credential presence, provider, and model metadata.',
   doctor: 'jevgraph doctor\nPrint redacted local configuration checks; no live authentication is attempted.',
@@ -74,7 +72,6 @@ export function parseCliArgs(argv = []) {
   const positionals = [];
   const options = {};
   let command;
-  let subcommand;
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -84,7 +81,6 @@ export function parseCliArgs(argv = []) {
     }
     if (!token.startsWith('-') || token === '-') {
       if (!command) command = token;
-      else if (!subcommand && command === 'notion') subcommand = token;
       else positionals.push(token);
       continue;
     }
@@ -122,7 +118,7 @@ export function parseCliArgs(argv = []) {
   if (options['candidate-limit'] !== undefined && options.candidates === undefined) {
     options.candidates = options['candidate-limit'];
   }
-  return { command, subcommand, positionals, options };
+  return { command, positionals, options };
 }
 
 function numberOption(parsed, name, fallback, { min = 0, max = 1000000 } = {}) {
@@ -214,17 +210,6 @@ async function loadRetrieval() {
   } catch (error) {
     if (error?.code === 'ERR_MODULE_NOT_FOUND') {
       throw new Error('Retrieval support is not present in this build; use graph commands or install a complete jevgraph package');
-    }
-    throw error;
-  }
-}
-
-async function loadNotion() {
-  try {
-    return await import('./notion.js');
-  } catch (error) {
-    if (error?.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new Error('Notion support is not present in this build');
     }
     throw error;
   }
@@ -493,7 +478,6 @@ async function handleConfig(io, doctor = false) {
     environment_keys: {
       typesafe: Boolean(io.env.TYPESAFE_API_KEY || io.env.JEV_API_KEY),
       openrouter: Boolean(io.env.OPENROUTER_API_KEY),
-      notion: Boolean(io.env.NOTION_TOKEN || io.env.NOTION_API_TOKEN),
     },
     notes: ['Configuration shape checked locally; no live authentication was attempted.'],
   });
@@ -579,32 +563,6 @@ async function handleVerify(parsed, io) {
   if (!result.verified) throw new Error('Migration verification failed; inspect the emitted report for fidelity issues');
 }
 
-async function handleNotion(parsed, io) {
-  const notion = await loadNotion();
-  const token = io.env.NOTION_TOKEN || io.env.NOTION_API_TOKEN;
-  if (!token) throw new Error('Notion commands require NOTION_TOKEN (or NOTION_API_TOKEN); MCP OAuth is not inherited by this CLI');
-  const client = notion.createNotionClient({ token });
-  if (parsed.subcommand === 'search') {
-    const query = parsed.positionals.join(' ').trim();
-    if (!query) optionError('Notion search requires a query');
-    return emitJson(io, await client.search(query, { limit: numberOption(parsed, 'limit', 20, { min: 1, max: 100 }) }), parsed.options.output);
-  }
-  if (parsed.subcommand === 'snapshot') {
-    const pageIds = csv(parsed.options.ids);
-    const dataSourceIds = csv(parsed.options['data-source-ids']);
-    if (!pageIds.length && !parsed.options.query && !dataSourceIds.length) optionError('Notion snapshot requires --ids, --data-source-ids, or --query');
-    return emitJson(io, await client.snapshot({
-      pageIds,
-      dataSourceIds,
-      query: parsed.options.query,
-      maxPages: numberOption(parsed, 'max-pages', 100, { min: 1, max: 10000 }),
-      maxBlocks: numberOption(parsed, 'max-blocks', 1000, { min: 1, max: 100000 }),
-      maxDepth: numberOption(parsed, 'max-depth', 20, { min: 1, max: 100 }),
-    }), parsed.options.output);
-  }
-  throw new Error('Use `jevgraph notion search` or `jevgraph notion snapshot`');
-}
-
 export async function runCli(argv = process.argv.slice(2), io = {}) {
   const runtime = {
     stdin: process.stdin,
@@ -626,7 +584,6 @@ export async function runCli(argv = process.argv.slice(2), io = {}) {
     if (parsed.command === 'setup') await handleSetup(parsed, runtime);
     else if (parsed.command === 'config') await handleConfig(runtime);
     else if (parsed.command === 'doctor') await handleConfig(runtime, true);
-    else if (parsed.command === 'notion') await handleNotion(parsed, runtime);
     else if (parsed.command === 'search' || parsed.command === 'place') await handleRetrieval(parsed, runtime);
     else if (parsed.command === 'verify-migration') await handleVerify(parsed, runtime);
     else if (['audit', 'traverse', 'connections', 'analysis-health', 'migration-plan'].includes(parsed.command)) await handleGraphCommand(parsed, runtime);
