@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { link, lstat, mkdir, mkdtemp, open, readFile, realpath, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { emitKeypressEvents } from 'node:readline';
 
@@ -42,6 +42,9 @@ Commands:
 Options:
   --help       Show command help
   --version    Show the CLI version
+
+--output creates a private file and refuses an existing path. Choose a new
+filename for each export, and use a directory path without symbolic links.
 
 API keys are accepted only from the environment or hidden setup input. They
 are never command-line arguments, printed, or included in graph artifacts.
@@ -152,8 +155,53 @@ async function emitJson(io, value, outputPath) {
     printJson(io, value);
     return;
   }
-  await mkdir(path.dirname(path.resolve(outputPath)), { recursive: true });
-  await writeFile(outputPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const destination = path.resolve(outputPath);
+  const parent = path.dirname(destination);
+  // Check every component before creating descendants: recursive mkdir would
+  // follow an existing directory symlink. Existing directory modes stay intact.
+  let directory = path.parse(parent).root;
+  for (const component of parent.slice(directory.length).split(path.sep).filter(Boolean)) {
+    directory = path.join(directory, component);
+    try {
+      await mkdir(directory, { mode: 0o700 });
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+    }
+    const info = await lstat(directory);
+    if (info.isSymbolicLink()) {
+      const actual = await realpath(directory).catch(() => undefined);
+      throw new Error(`Output directory path contains a symbolic link; choose a directory path without symbolic links.${actual ? ` Use ${JSON.stringify(actual)} in place of ${JSON.stringify(directory)}.` : ''}`);
+    }
+    if (!info.isDirectory()) {
+      throw new Error('Output directory must contain only real directories, not symbolic links; choose a directory path without symbolic links');
+    }
+  }
+  // Serialize before creating the staging file; only a complete, synced file is
+  // published. link(), unlike rename(), atomically refuses any existing target,
+  // including a dangling symlink or a concurrent writer's completed export.
+  const contents = `${JSON.stringify(value, null, 2)}\n`;
+  const staging = await mkdtemp(path.join(parent, '.jevgraph-output-'));
+  const temporaryPath = path.join(staging, 'output.json');
+  let handle;
+  try {
+    handle = await open(temporaryPath, 'wx', 0o600);
+    await handle.chmod(0o600);
+    await handle.writeFile(contents, 'utf8');
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    try {
+      await link(temporaryPath, destination);
+    } catch (error) {
+      if (error?.code === 'EEXIST') {
+        throw new Error('Output path already exists; choose a new --output filename. Existing files and symbolic links are never overwritten.');
+      }
+      throw error;
+    }
+  } finally {
+    if (handle) await handle.close().catch(() => {});
+    await rm(staging, { recursive: true, force: true });
+  }
 }
 
 async function loadEngine() {

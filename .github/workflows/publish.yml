@@ -1,0 +1,35 @@
+name: Publish npm package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the released source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.14.0'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Verify the release tag matches package.json
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          test "${GITHUB_REF_NAME#v}" = "$version"
+
+      - name: Install the locked package tree
+        run: npm ci
+
+      - name: Publish with npm provenance
+        run: npm publish --provenance --access public

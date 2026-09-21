@@ -25,11 +25,17 @@ For an existing MCP session, the concrete handoff is:
 1. The caller uses its authorized MCP tools to fetch page content and
    properties, and optionally query data sources.
 2. The caller writes the returned pages, relation evidence, IDs, warnings, and
-   completeness metadata to a JSON snapshot.
+   completeness metadata to a JSON snapshot in a private local directory,
+   using a fresh non-symlink filename and mode `0600` (and `0700` for a newly
+   created private directory). Refuse overwriting an existing path, including
+   symlinks. These precautions apply to the caller or other tool creating the
+   snapshot; the CLI cannot enforce them on an agent-created file. The CLI's
+   own `--output` path has separate private-file and no-overwrite checks.
 3. The caller runs `jevgraph audit --input snapshot.json`,
    `jevgraph search QUERY --input snapshot.json`, or
-   `jevgraph place TEXT --input snapshot.json --offline`, using the GitHub
-   installation or npx invocation described in the skill.
+   `jevgraph place TEXT --input snapshot.json --offline`, using
+   `node bin/jevgraph.js ...` from a local checkout or an already installed
+   `jevgraph ...` command.
 
 The CLI's `jevgraph notion snapshot` command is a separate REST path and
 requires `NOTION_TOKEN` or `NOTION_API_TOKEN`; it cannot inherit MCP OAuth.

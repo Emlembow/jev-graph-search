@@ -321,6 +321,11 @@ export function createNotionClient({
 
   // Validate the caller-selected base before any token-bearing request.
   fullUrl(base, '/');
+  const endpoint = new URL(base);
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname);
+  if (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && loopback)) {
+    throw new NotionError('Notion endpoint requires HTTPS (explicit loopback HTTP is allowed for local tests)', { code: 'unsafe_base_url' });
+  }
   async function request(pathOrUrl, { method = 'GET', body, signal } = {}) {
     if (!token) throw new NotionAuthError();
     ensureSignal(signal);

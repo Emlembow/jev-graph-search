@@ -5,11 +5,15 @@
   "type": "module",
   "license": "UNLICENSED",
   "private": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=20"
   },
   "bin": {
-    "jevgraph": "./bin/jevgraph.js"
+    "jevgraph": "bin/jevgraph.js"
   },
   "exports": {
     ".": "./src/cli.js",

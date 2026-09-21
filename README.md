@@ -23,10 +23,10 @@ The graph covers 205 sections of 26 U.S.C., Subchapter B, from [OLRC release 119
 
 Requires **Node.js 20+**, npm, and Git. No runtime dependencies.
 
-Run the CLI directly from GitHub:
+Run the CLI from an existing local checkout:
 
 ```sh
-npx --yes --package=github:Emlembow/jevgraph jevgraph setup
+node bin/jevgraph.js setup
 ```
 
 Use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API key into the hidden prompt. Your key is saved in a private per-user configuration file, outside the graph.
@@ -34,24 +34,15 @@ Use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API 
 Search a directory of Markdown files or a [JSON snapshot](docs/schema.md):
 
 ```sh
-npx --yes --package=github:Emlembow/jevgraph jevgraph search "Why did we choose this database?" --input ./memory
+node bin/jevgraph.js search "Why did we choose this database?" --input ./memory
 ```
 
-For a persistent `jevgraph` command:
-
-```sh
-npm install --global github:Emlembow/jevgraph
-jevgraph --help
-```
-
-These commands install from GitHub; they do not require an npm registry release.
+The release workflow is configured for npm trusted publishing with provenance. Registry installation instructions will be added only after a reviewed release is actually published.
 
 <details>
 <summary>Try the included example without a key</summary>
 
 ```sh
-git clone https://github.com/Emlembow/jevgraph.git
-cd jevgraph
 node bin/jevgraph.js search "Why PostgreSQL?" --input examples/memory.json --offline
 node bin/jevgraph.js audit --input examples/memory.json
 ```
@@ -63,30 +54,30 @@ node bin/jevgraph.js audit --input examples/memory.json
 ## Agent skill
 
 ```sh
-npx skills add Emlembow/jevgraph --skill jevgraph
+npx skills add ./skills/jevgraph --skill jevgraph
 ```
 
 The [skill](skills/jevgraph/SKILL.md) teaches an agent how to retrieve evidence, inspect links, propose memory destinations, and handle Notion snapshots. It invokes the CLI above. Skill installation does not configure API keys or connect Notion.
 
 ## Commands
 
-After installing the CLI:
+From the local checkout:
 
 ```sh
 # Retrieve source passages
-jevgraph search "What did we decide?" --input ./memory
+node bin/jevgraph.js search "What did we decide?" --input ./memory
 
 # Propose where a new memory belongs
-jevgraph place "We chose PostgreSQL for transactions" --input ./memory
+node bin/jevgraph.js place "We chose PostgreSQL for transactions" --input ./memory
 
 # Audit explicit structure; add --semantic for Jev suggestions
-jevgraph audit --input ./memory
+node bin/jevgraph.js audit --input ./memory
 
 # Follow existing links without a provider key
-jevgraph traverse --input snapshot.json --from PAGE_A --to PAGE_B
+node bin/jevgraph.js traverse --input snapshot.json --from PAGE_A --to PAGE_B
 ```
 
-Search finds lexical candidates and bounded graph neighbors, then Jev reranks them. Exact source evidence is retained. `place` and migration commands propose changes; they do not write to your graph. Use `jevgraph --help` for all commands.
+Search finds lexical candidates and bounded graph neighbors, then Jev reranks them. Exact source evidence is retained. `place` and migration commands propose changes; they do not write to your graph. Use `node bin/jevgraph.js --help` for all commands.
 
 ## Notion
 
@@ -95,8 +86,8 @@ Search finds lexical candidates and bounded graph neighbors, then Jev reranks th
 **Using Notion directly?** Supply `NOTION_TOKEN` in your environment, then run:
 
 ```sh
-jevgraph notion snapshot --ids PAGE_ID --output snapshot.json
-jevgraph search "What did we decide?" --input snapshot.json
+node bin/jevgraph.js notion snapshot --ids PAGE_ID --output snapshot.json
+node bin/jevgraph.js search "What did we decide?" --input snapshot.json
 ```
 
 The Notion adapter is read-only. Missing permissions, truncated content, and incomplete scope remain visible as warnings. [Notion setup and MCP handoff →](docs/notion.md)
