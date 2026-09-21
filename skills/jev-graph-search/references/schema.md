@@ -1,10 +1,10 @@
-# jevgraph reference: local graph and result boundaries
+# jev-graph-search reference: local graph and result boundaries
 
 Use this reference when a local graph needs field-level decisions.
 
 ## Inputs
 
-A directory input is a local Markdown graph. Jevgraph walks it recursively,
+A directory input is a local Markdown graph. Jev Graph Search walks it recursively,
 reads `.md` files, skips hidden paths and symbolic links, and assigns each file
 a deterministic ID from its relative `source_path`. A file input is JSON
 exchange; standalone Markdown files are not a separate mode. Obsidian vaults

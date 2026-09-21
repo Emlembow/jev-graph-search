@@ -8,7 +8,7 @@ import {
   saveCredentials,
 } from './config.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 
 const VALUE_OPTIONS = new Set([
   'input', 'output', 'limit', 'candidates', 'candidate-limit', 'max-chars',
@@ -18,7 +18,7 @@ const VALUE_OPTIONS = new Set([
 const BOOLEAN_OPTIONS = new Set(['help', 'version', 'offline', 'semantic', 'from-env', 'no-cache']);
 const SECRET_OPTION = /(?:api[-_]?key|token|secret|password)/i;
 
-export const HELP = `jevgraph ${VERSION}
+export const HELP = `jev-graph-search ${VERSION}
 
 Read local Markdown folders directly, including Obsidian vaults and Logseq
 Markdown graphs. JSON snapshots are optional. Offline inspection is key-free.
@@ -26,17 +26,17 @@ Semantic search, placement, and semantic audit require a configured Jev provider
 unless --offline is set.
 
 Commands:
-  jevgraph audit --input PATH [--semantic] [--offline]
-  jevgraph search QUERY --input PATH [--limit N --candidates N --max-chars N --offline --no-cache]
-  jevgraph place TEXT --input PATH [same retrieval options]
-  jevgraph traverse --input PATH --from ID --to ID [--max-hops N --max-visited N]
-  jevgraph connections --input PATH --from ID --to ID
-  jevgraph analysis-health --input PATH [--page-types a,b --min-outgoing N]
-  jevgraph migration-plan --input PATH [--output FILE]
-  jevgraph verify-migration --plan FILE --input TARGET_SNAPSHOT
-  jevgraph setup [--provider typesafe|openrouter] [--from-env]
-  jevgraph config
-  jevgraph doctor
+  jev-graph-search audit --input PATH [--semantic] [--offline]
+  jev-graph-search search QUERY --input PATH [--limit N --candidates N --max-chars N --offline --no-cache]
+  jev-graph-search place TEXT --input PATH [same retrieval options]
+  jev-graph-search traverse --input PATH --from ID --to ID [--max-hops N --max-visited N]
+  jev-graph-search connections --input PATH --from ID --to ID
+  jev-graph-search analysis-health --input PATH [--page-types a,b --min-outgoing N]
+  jev-graph-search migration-plan --input PATH [--output FILE]
+  jev-graph-search verify-migration --plan FILE --input TARGET_SNAPSHOT
+  jev-graph-search setup [--provider typesafe|openrouter] [--from-env]
+  jev-graph-search config
+  jev-graph-search doctor
 
 Options:
   --help       Show command help
@@ -50,17 +50,17 @@ are never command-line arguments, printed, or included in graph artifacts.
 `;
 
 const COMMAND_HELP = {
-  audit: 'jevgraph audit --input PATH [--semantic] [--offline]\nAudit explicit graph structure; --semantic adds bounded Jev suggestions.',
-  search: 'jevgraph search QUERY --input PATH [--limit N --candidates N --max-chars N --offline --no-cache]\nFind evidenced pages. Semantic mode is the default; --offline selects lexical retrieval.',
-  place: 'jevgraph place TEXT --input PATH [--limit N --candidates N --max-chars N --offline]\nPropose a page for text placement without writing pages.',
-  traverse: 'jevgraph traverse --input PATH --from ID --to ID [--max-hops N --max-visited N]\nFind a directed path without provider credentials.',
-  connections: 'jevgraph connections --input PATH --from ID --to ID\nReport a path and shared connections without provider credentials.',
-  'analysis-health': 'jevgraph analysis-health --input PATH [--page-types a,b --min-outgoing N]\nCheck explicitly tagged analysis, strategy, and assessment pages.',
-  'migration-plan': 'jevgraph migration-plan --input PATH [--output FILE]\nCreate a deterministic proposal; no target writes occur.',
-  'verify-migration': 'jevgraph verify-migration --plan FILE --input TARGET_SNAPSHOT\nVerify a target snapshot against a migration proposal.',
-  setup: 'jevgraph setup [--provider typesafe|openrouter] [--from-env]\nPersist a hidden key prompt or an already-exported provider key.',
-  config: 'jevgraph config\nPrint redacted credential presence, provider, and model metadata.',
-  doctor: 'jevgraph doctor\nPrint redacted local configuration checks; no live authentication is attempted.',
+  audit: 'jev-graph-search audit --input PATH [--semantic] [--offline]\nAudit explicit graph structure; --semantic adds bounded Jev suggestions.',
+  search: 'jev-graph-search search QUERY --input PATH [--limit N --candidates N --max-chars N --offline --no-cache]\nFind evidenced pages. Semantic mode is the default; --offline selects lexical retrieval.',
+  place: 'jev-graph-search place TEXT --input PATH [--limit N --candidates N --max-chars N --offline]\nPropose a page for text placement without writing pages.',
+  traverse: 'jev-graph-search traverse --input PATH --from ID --to ID [--max-hops N --max-visited N]\nFind a directed path without provider credentials.',
+  connections: 'jev-graph-search connections --input PATH --from ID --to ID\nReport a path and shared connections without provider credentials.',
+  'analysis-health': 'jev-graph-search analysis-health --input PATH [--page-types a,b --min-outgoing N]\nCheck explicitly tagged analysis, strategy, and assessment pages.',
+  'migration-plan': 'jev-graph-search migration-plan --input PATH [--output FILE]\nCreate a deterministic proposal; no target writes occur.',
+  'verify-migration': 'jev-graph-search verify-migration --plan FILE --input TARGET_SNAPSHOT\nVerify a target snapshot against a migration proposal.',
+  setup: 'jev-graph-search setup [--provider typesafe|openrouter] [--from-env]\nPersist a hidden key prompt or an already-exported provider key.',
+  config: 'jev-graph-search config\nPrint redacted credential presence, provider, and model metadata.',
+  doctor: 'jev-graph-search doctor\nPrint redacted local configuration checks; no live authentication is attempted.',
 };
 
 function optionError(message) {
@@ -176,7 +176,7 @@ async function emitJson(io, value, outputPath) {
   // published. link(), unlike rename(), atomically refuses any existing target,
   // including a dangling symlink or a concurrent writer's completed export.
   const contents = `${JSON.stringify(value, null, 2)}\n`;
-  const staging = await mkdtemp(path.join(parent, '.jevgraph-output-'));
+  const staging = await mkdtemp(path.join(parent, '.jev-graph-search-output-'));
   const temporaryPath = path.join(staging, 'output.json');
   let handle;
   try {
@@ -209,7 +209,7 @@ async function loadRetrieval() {
     return await import('./retrieval.js');
   } catch (error) {
     if (error?.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new Error('Retrieval support is not present in this build; use graph commands or install a complete jevgraph package');
+      throw new Error('Retrieval support is not present in this build; use graph commands or install a complete jev-graph-search package');
     }
     throw error;
   }
@@ -248,7 +248,7 @@ async function semanticRuntime(io, offline, { cacheEnabled = true, model, provid
   const config = await resolveConfig({ env: configEnv });
   if (!config.configured || !config.provider || !config.apiKey) {
     const selected = provider ? ` for provider ${provider}` : '';
-    throw new Error(`Semantic mode requires a Jev credential${selected}. Set the matching provider environment key, run jevgraph setup, or explicitly pass --offline.`);
+    throw new Error(`Semantic mode requires a Jev credential${selected}. Set the matching provider environment key, run jev-graph-search setup, or explicitly pass --offline.`);
   }
   const { createJevClient } = await loadJev();
   return {
@@ -344,7 +344,7 @@ async function handleSetup(parsed, io) {
     }
   } else {
     if (!io.stdin?.isTTY || typeof io.stdin.setRawMode !== 'function') {
-      throw new Error('Interactive setup needs a TTY. Export a provider key and rerun `jevgraph setup --from-env`.');
+      throw new Error('Interactive setup needs a TTY. Export a provider key and rerun `jev-graph-search setup --from-env`.');
     }
     if (!provider) provider = await selectProvider(io);
     apiKey = await readHidden(io, `${provider === 'typesafe' ? 'TypeSafe' : 'OpenRouter'} API key: `);

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jev Graph Search"
+  short_description: "Operate Jev Graph Search graph workflows"
+  default_prompt: "Use $jev-graph-search to inspect a graph and report evidenced connections."

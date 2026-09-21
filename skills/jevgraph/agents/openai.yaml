@@ -1,4 +1,0 @@
-interface:
-  display_name: "jevgraph"
-  short_description: "Operate jevgraph graph workflows"
-  default_prompt: "Use $jevgraph to inspect a graph and report evidenced connections."

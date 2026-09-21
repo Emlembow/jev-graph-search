@@ -1,6 +1,6 @@
 {
-  "name": "jevgraph",
-  "version": "0.2.0",
+  "name": "jev-graph-search",
+  "version": "0.2.1",
   "description": "Evidence-preserving graph inspection and Jev-assisted retrieval for local Markdown, Obsidian vaults, and Logseq Markdown graphs.",
   "type": "module",
   "license": "UNLICENSED",
@@ -13,7 +13,7 @@
     "node": ">=20"
   },
   "bin": {
-    "jevgraph": "bin/jevgraph.js"
+    "jev-graph-search": "bin/jev-graph-search.js"
   },
   "exports": {
     ".": "./src/cli.js",
@@ -22,7 +22,7 @@
     "./jev": "./src/jev.js",
     "./cache": "./src/cache.js",
     "./retrieval": "./src/retrieval.js",
-    "./skill": "./skills/jevgraph/SKILL.md",
+    "./skill": "./skills/jev-graph-search/SKILL.md",
     "./package.json": "./package.json"
   },
   "files": [
@@ -35,11 +35,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Emlembow/jevgraph.git"
+    "url": "git+https://github.com/Emlembow/jev-graph-search.git"
   },
-  "homepage": "https://github.com/Emlembow/jevgraph#readme",
+  "homepage": "https://github.com/Emlembow/jev-graph-search#readme",
   "bugs": {
-    "url": "https://github.com/Emlembow/jevgraph/issues"
+    "url": "https://github.com/Emlembow/jev-graph-search/issues"
   },
   "keywords": [
     "jev",

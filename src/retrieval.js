@@ -61,7 +61,7 @@ function optionsCheck({limit,candidateLimit,maxChars,threshold}) {
   if(typeof threshold!=='number'||!Number.isFinite(threshold)||threshold<0||threshold>1)throw new Error('threshold must be between 0 and 1');
 }
 async function score(jev,pairs,{purpose='relevance',cache=defaultCache,signal,cacheTtlMs=300000}={}) {
-  if(!jev||typeof jev.scorePairs!=='function')throw new Error('Semantic retrieval requires a configured Jev client. Run jevgraph setup or explicitly choose --offline.');
+  if(!jev||typeof jev.scorePairs!=='function')throw new Error('Semantic retrieval requires a configured Jev client. Run jev-graph-search setup or explicitly choose --offline.');
   checkInt(cacheTtlMs,'cacheTtlMs',0,86400000);
   const now=Date.now(), scores=new Map(), pending=[], keys=new Map(), cachedModels=new Set(); let hits=0;
   for(const pair of pairs) {
@@ -91,7 +91,7 @@ export async function retrieve(graph,query,{limit=5,candidateLimit=20,maxChars=6
   if(!['required','off'].includes(mode))throw new Error('mode must be required or off; offline retrieval must be explicit');
   optionsCheck({limit,candidateLimit,maxChars,threshold});
   const useJev=mode!=='off'&&!offline;
-  if(useJev&&(!jev||typeof jev.scorePairs!=='function'))throw new Error('Semantic retrieval requires a configured Jev client. Run jevgraph setup or explicitly choose --offline.');
+  if(useJev&&(!jev||typeof jev.scorePairs!=='function'))throw new Error('Semantic retrieval requires a configured Jev client. Run jev-graph-search setup or explicitly choose --offline.');
   if(signal?.aborted)throw new Error('Retrieval cancelled');
   const started=performance.now(),shortlist=candidates(graph,query,candidateLimit);
   const rows=shortlist.map(c=>{

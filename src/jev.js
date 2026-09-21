@@ -20,7 +20,7 @@ export function createJevClient({ provider = 'typesafe', apiKey, model, baseUrl,
   if (endpoint.protocol !== 'https:' && !(['localhost','127.0.0.1','[::1]'].includes(endpoint.hostname) && endpoint.protocol === 'http:')) throw new Error('Jev endpoint requires HTTPS (localhost HTTP is allowed for tests)');
   const cacheNamespace = createHash('sha256').update(JSON.stringify([provider, model, endpoint.toString(), createHash('sha256').update(apiKey || '').digest('hex'), 'noul-v1'])).digest('hex');
   async function scorePairs(pairs, { purpose = 'relevance', signal } = {}) {
-    if (typeof apiKey !== 'string' || !apiKey.trim()) throw new JevUnavailable(`No ${provider === 'openrouter' ? 'OpenRouter' : 'Jev'} API key configured. Run jevgraph setup, set the provider environment key, or explicitly choose --offline.`);
+    if (typeof apiKey !== 'string' || !apiKey.trim()) throw new JevUnavailable(`No ${provider === 'openrouter' ? 'OpenRouter' : 'Jev'} API key configured. Run jev-graph-search setup, set the provider environment key, or explicitly choose --offline.`);
     if (!rules[purpose]) throw new Error('Unsupported semantic scoring purpose');
     if (!Array.isArray(pairs) || pairs.length > 100) throw new Error('scorePairs requires at most 100 candidate pairs');
     const ids = new Set();

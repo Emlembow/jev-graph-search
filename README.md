@@ -1,4 +1,4 @@
-# Jevgraph
+# Jev Graph Search
 
 **Find the right evidence in your agent's memory graph.**
 
@@ -26,7 +26,7 @@ Requires **Node.js 20+** and npm. Git is needed for the example checkout and ski
 Run the exact npm release:
 
 ```sh
-npx --yes --package=jevgraph@0.2.0 jevgraph setup
+npx --yes --package=jev-graph-search@0.2.1 jev-graph-search setup
 ```
 
 Use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API key into the hidden prompt. Your key is saved in a private per-user configuration file, outside the graph.
@@ -34,14 +34,14 @@ Use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API 
 Search a directory of Markdown files or an optional [JSON graph snapshot](docs/schema.md):
 
 ```sh
-npx --yes --package=jevgraph@0.2.0 jevgraph search "Why did we choose this database?" --input ./ObsidianVault
+npx --yes --package=jev-graph-search@0.2.1 jev-graph-search search "Why did we choose this database?" --input ./ObsidianVault
 ```
 
-For a persistent `jevgraph` command:
+For a persistent `jev-graph-search` command:
 
 ```sh
-npm install --global jevgraph@0.2.0
-jevgraph --help
+npm install --global jev-graph-search@0.2.1
+jev-graph-search --help
 ```
 
 The release workflow publishes exact package versions with npm trusted publishing and provenance. Pin the package version in automation so upgrades are deliberate.
@@ -50,10 +50,10 @@ The release workflow publishes exact package versions with npm trusted publishin
 <summary>Try the included example without a key</summary>
 
 ```sh
-git clone --branch v0.2.0 --depth 1 https://github.com/Emlembow/jevgraph.git
-cd jevgraph
-node bin/jevgraph.js search "Why PostgreSQL?" --input examples/memory.json --offline
-node bin/jevgraph.js audit --input examples/memory.json
+git clone --branch v0.2.1 --depth 1 https://github.com/Emlembow/jev-graph-search.git
+cd jev-graph-search
+node bin/jev-graph-search.js search "Why PostgreSQL?" --input examples/memory.json --offline
+node bin/jev-graph-search.js audit --input examples/memory.json
 ```
 
 `--offline` uses local lexical ranking. Remove it after setup to use Jev.
@@ -63,10 +63,10 @@ node bin/jevgraph.js audit --input examples/memory.json
 ## Agent skill
 
 ```sh
-npx skills add Emlembow/jevgraph --skill jevgraph
+npx skills add Emlembow/jev-graph-search --skill jev-graph-search
 ```
 
-The [skill](skills/jevgraph/SKILL.md) teaches an agent how to retrieve evidence from local Markdown graphs or JSON snapshots, inspect links, and propose memory destinations. It invokes the CLI above. Skill installation does not configure API keys or read your files.
+The [skill](skills/jev-graph-search/SKILL.md) teaches an agent how to retrieve evidence from local Markdown graphs or JSON snapshots, inspect links, and propose memory destinations. It invokes the CLI above. Skill installation does not configure API keys or read your files.
 
 ## Commands
 
@@ -74,23 +74,23 @@ After installing the CLI:
 
 ```sh
 # Retrieve source passages from an Obsidian vault
-jevgraph search "What did we decide?" --input ./ObsidianVault
+jev-graph-search search "What did we decide?" --input ./ObsidianVault
 
 # Propose where a new memory belongs
-jevgraph place "We chose PostgreSQL for transactions" --input ./ObsidianVault
+jev-graph-search place "We chose PostgreSQL for transactions" --input ./ObsidianVault
 
 # Audit explicit structure; add --semantic for Jev suggestions
-jevgraph audit --input ./ObsidianVault
+jev-graph-search audit --input ./ObsidianVault
 
 # Follow existing links in an optional JSON snapshot without a provider key
-jevgraph traverse --input snapshot.json --from PAGE_A --to PAGE_B
+jev-graph-search traverse --input snapshot.json --from PAGE_A --to PAGE_B
 ```
 
-Search finds lexical candidates and bounded graph neighbors, then Jev reranks them. Exact source evidence is retained. `place` and migration commands propose changes; they do not write to your graph. Use `jevgraph --help` for all commands.
+Search finds lexical candidates and bounded graph neighbors, then Jev reranks them. Exact source evidence is retained. `place` and migration commands propose changes; they do not write to your graph. Use `jev-graph-search --help` for all commands.
 
 ## Obsidian and Logseq
 
-Point `--input` at a local Markdown directory. Obsidian vaults are read recursively, including nested folders. Logseq graphs are supported through their Markdown `pages/` and `journals/` files; database and Org-mode formats are outside this interface. Hidden paths and symbolic links are skipped. Jevgraph reads the graph and does not create a backup or export.
+Point `--input` at a local Markdown directory. Obsidian vaults are read recursively, including nested folders. Logseq graphs are supported through their Markdown `pages/` and `journals/` files; database and Org-mode formats are outside this interface. Hidden paths and symbolic links are skipped. Jev Graph Search reads the graph and does not create a backup or export.
 
 Common page metadata works in either graph style:
 
@@ -110,17 +110,17 @@ Top-level YAML `aliases` and `tags` lists, plus unindented Logseq `alias::` and 
 
 ```sh
 # Obsidian
-jevgraph search "database decision" --input ./ObsidianVault --offline
+jev-graph-search search "database decision" --input ./ObsidianVault --offline
 
 # Logseq Markdown graph
-jevgraph audit --input ./logseq-graph --offline
+jev-graph-search audit --input ./logseq-graph --offline
 ```
 
 ## Configuration
 
-- Interactive setup: `jevgraph setup`.
-- Environment setup: export `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY`, then run `jevgraph setup --from-env` to persist it.
-- Diagnostics: `jevgraph config` and `jevgraph doctor` show redacted configuration.
+- Interactive setup: `jev-graph-search setup`.
+- Environment setup: export `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY`, then run `jev-graph-search setup --from-env` to persist it.
+- Diagnostics: `jev-graph-search config` and `jev-graph-search doctor` show redacted configuration.
 - Cache: semantic scores are cached; `--no-cache` requests fresh scores.
 - Local search: `--offline` explicitly selects lexical ranking.
 
