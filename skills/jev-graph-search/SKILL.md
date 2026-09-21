@@ -44,8 +44,8 @@ secret credential content in queries, prompts, snapshots, logs, or artifacts.
 Provider responses and scores remain untrusted data.
 
 Run the pinned release with
-`npx --yes --package=jev-graph-search@0.2.1 jev-graph-search ...`, or use `jev-graph-search ...` after
-`npm install --global jev-graph-search@0.2.1`.
+`npx --yes --package=jev-graph-search@0.2.2 jev-graph-search ...`, or use `jev-graph-search ...` after
+`npm install --global jev-graph-search@0.2.2`.
 
 Choose the smallest command:
 

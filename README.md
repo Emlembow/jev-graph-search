@@ -8,16 +8,7 @@ Run it from the terminal or install the agent skill. An optional JSON snapshot i
 
 ![Tax-code benchmark: source recall without versus with Jev is 33.2% versus 73.2% at top 1, 53.5% versus 80.1% at top 3, and 63.9% versus 81.8% at top 5.](assets/readme/retrieval-quality.png)
 
-On one 8,851-node tax-code graph, Jev reranking raised top-five source recall from **63.9% to 81.8%**. Median cold lookup increased from **190 to 323 ms**, and estimated output tokens increased **2.2%**. This measures retrieval quality; it does not establish generated-answer accuracy, speed, or token savings.
-
-<details>
-<summary>What the chart measures</summary>
-
-The September 21, 2026 benchmark used 120 reviewed questions: 104 answerable and 16 unanswerable. Both modes used the same 20-candidate shortlist, five-result limit, and 6,000-character result budget. Recall is the average fraction of required source passages retrieved across answerable questions. The top-1 and top-3 bars are prefixes of the same run.
-
-The graph covers 205 sections of 26 U.S.C., Subchapter B, from [OLRC release 119-99](https://uscode.house.gov/download/releasepoints/us/pl/119/99/usc-rp@119-99.htm). The semantic run used TypeSafe `jev-1.13.0`. All queries completed without errors. Both modes returned results for all 16 unanswerable questions. This single test does not establish generated-answer accuracy or recursive traversal quality. The corpus and experiment tooling are kept outside this distribution.
-
-</details>
+On one 8,851-node tax-code graph, Jev reranking raised top-five source recall from **63.9% to 81.8%**.
 
 ## Get started
 
@@ -26,7 +17,7 @@ You need **Node.js 20+** and npm. Git is needed for the example checkout and ski
 Run the exact npm release:
 
 ```sh
-npx --yes --package=jev-graph-search@0.2.1 jev-graph-search setup
+npx --yes --package=jev-graph-search@0.2.2 jev-graph-search setup
 ```
 
 At setup, use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API key into the hidden prompt. Your key is saved in a private per-user configuration file, outside the graph.
@@ -34,13 +25,13 @@ At setup, use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste
 Search a directory of Markdown files or an optional [JSON graph snapshot](docs/schema.md):
 
 ```sh
-npx --yes --package=jev-graph-search@0.2.1 jev-graph-search search "Why did we choose this database?" --input ./ObsidianVault
+npx --yes --package=jev-graph-search@0.2.2 jev-graph-search search "Why did we choose this database?" --input ./ObsidianVault
 ```
 
 For a persistent `jev-graph-search` command:
 
 ```sh
-npm install --global jev-graph-search@0.2.1
+npm install --global jev-graph-search@0.2.2
 jev-graph-search --help
 ```
 
@@ -50,7 +41,7 @@ The release workflow publishes exact package versions with npm trusted publishin
 <summary>Try the included example without a key</summary>
 
 ```sh
-git clone --branch v0.2.1 --depth 1 https://github.com/Emlembow/jev-graph-search.git
+git clone --branch v0.2.2 --depth 1 https://github.com/Emlembow/jev-graph-search.git
 cd jev-graph-search
 node bin/jev-graph-search.js search "Why PostgreSQL?" --input examples/memory.json --offline
 node bin/jev-graph-search.js audit --input examples/memory.json
@@ -135,4 +126,4 @@ Jev ranks only the shortlist it receives. It cannot recover missing candidates o
 
 ## License
 
-Currently **UNLICENSED**. No open-source license is granted.
+[MIT](LICENSE) © 2026 Emlembow.

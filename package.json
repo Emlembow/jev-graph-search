@@ -1,9 +1,9 @@
 {
   "name": "jev-graph-search",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Evidence-preserving graph inspection and Jev-assisted retrieval for local Markdown, Obsidian vaults, and Logseq Markdown graphs.",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false,
   "publishConfig": {
     "access": "public",
