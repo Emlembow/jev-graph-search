@@ -1,14 +1,14 @@
 # Jev Graph Search
 
-**Find the right evidence in your agent's memory graph.**
+Jev Graph Search helps an AI agent find useful notes and passages in a local Obsidian vault or a folder of Logseq Markdown notes. It makes a shortlist on your machine, then uses Jev to rank those candidates against your question. The result includes the original passage and source reference, so the agent can point back to the note it used.
 
-A CLI and agent skill for searching local Markdown knowledge graphs and optional JSON snapshots with [Jev](https://docs.typesafe.ai/introduction). Results keep the original source passages and citations.
+Run it from the terminal or install the agent skill. An optional JSON snapshot is supported as well. See [Jev](https://docs.typesafe.ai/introduction) for the ranking service.
 
 [Get started](#get-started) · [Obsidian and Logseq](#obsidian-and-logseq) · [Agent skill](#agent-skill) · [Documentation](#documentation)
 
 ![Tax-code benchmark: source recall without versus with Jev is 33.2% versus 73.2% at top 1, 53.5% versus 80.1% at top 3, and 63.9% versus 81.8% at top 5.](assets/readme/retrieval-quality.png)
 
-**Better ranking, with a tradeoff.** On one 8,851-node tax-code graph, top-five source recall rose from **63.9% to 81.8%**. Median cold lookup increased from **190 to 323 ms**, and estimated output tokens increased **2.2%**. This is a retrieval-quality result, not a speed or token-saving claim.
+On one 8,851-node tax-code graph, Jev reranking raised top-five source recall from **63.9% to 81.8%**. Median cold lookup increased from **190 to 323 ms**, and estimated output tokens increased **2.2%**. This measures retrieval quality; it does not establish generated-answer accuracy, speed, or token savings.
 
 <details>
 <summary>What the chart measures</summary>
@@ -21,7 +21,7 @@ The graph covers 205 sections of 26 U.S.C., Subchapter B, from [OLRC release 119
 
 ## Get started
 
-Requires **Node.js 20+** and npm. Git is needed for the example checkout and skill installation. No runtime dependencies.
+You need **Node.js 20+** and npm. Git is needed for the example checkout and skill installation. The CLI has no runtime dependencies.
 
 Run the exact npm release:
 
@@ -29,7 +29,7 @@ Run the exact npm release:
 npx --yes --package=jev-graph-search@0.2.1 jev-graph-search setup
 ```
 
-Use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API key into the hidden prompt. Your key is saved in a private per-user configuration file, outside the graph.
+At setup, use **↑/↓ and Enter** to choose TypeSafe or OpenRouter, then paste your API key into the hidden prompt. Your key is saved in a private per-user configuration file, outside the graph.
 
 Search a directory of Markdown files or an optional [JSON graph snapshot](docs/schema.md):
 
@@ -66,11 +66,11 @@ node bin/jev-graph-search.js audit --input examples/memory.json
 npx skills add Emlembow/jev-graph-search --skill jev-graph-search
 ```
 
-The [skill](skills/jev-graph-search/SKILL.md) teaches an agent how to retrieve evidence from local Markdown graphs or JSON snapshots, inspect links, and propose memory destinations. It invokes the CLI above. Skill installation does not configure API keys or read your files.
+The [skill](skills/jev-graph-search/SKILL.md) tells an agent how to retrieve evidence from local Markdown graphs or JSON snapshots, inspect links, and suggest where to save a new note. It invokes the CLI above. Installing the skill does not configure API keys or read your files.
 
 ## Commands
 
-After installing the CLI:
+With the CLI installed, try these operations:
 
 ```sh
 # Retrieve source passages from an Obsidian vault
@@ -86,11 +86,11 @@ jev-graph-search audit --input ./ObsidianVault
 jev-graph-search traverse --input snapshot.json --from PAGE_A --to PAGE_B
 ```
 
-Search finds lexical candidates and bounded graph neighbors, then Jev reranks them. Exact source evidence is retained. `place` and migration commands propose changes; they do not write to your graph. Use `jev-graph-search --help` for all commands.
+Search starts with keyword matches and a limited set of linked notes, then sends selected titles, bounded aliases, and content excerpts to Jev for reranking. Results retain the exact source evidence. `place` and migration commands propose changes without writing to your graph. Use `jev-graph-search --help` for all commands.
 
 ## Obsidian and Logseq
 
-Point `--input` at a local Markdown directory. Obsidian vaults are read recursively, including nested folders. Logseq graphs are supported through their Markdown `pages/` and `journals/` files; database and Org-mode formats are outside this interface. Hidden paths and symbolic links are skipped. Jev Graph Search reads the graph and does not create a backup or export.
+Set `--input` to a local Markdown directory. Obsidian vaults are read recursively, including nested folders. Logseq graphs are supported through their Markdown `pages/` and `journals/` files; database and Org-mode formats are outside this interface. Hidden paths and symbolic links are skipped. Reading the graph does not create a backup or export.
 
 Common page metadata works in either graph style:
 
@@ -131,7 +131,7 @@ Keys are never accepted as command-line arguments. Saved credentials use a `0600
 - [Local graph schema and Markdown inputs](docs/schema.md)
 - [Provider setup and credential storage](docs/setup.md)
 
-Jev ranks a bounded candidate set; it cannot recover missing candidates or prove that evidence is sufficient. Model suggestions are not observed graph links. Partial snapshots remain partial. The current default does not guarantee no-answer rejection.
+Jev ranks only the shortlist it receives. It cannot recover missing candidates or show that the available evidence is sufficient. Model suggestions are not links that already exist in the graph, and a partial snapshot stays partial. The current default may still return results when the question has no answer in the graph.
 
 ## License
 
