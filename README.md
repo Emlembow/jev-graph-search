@@ -124,6 +124,8 @@ Keys are never accepted as command-line arguments. Saved credentials use a `0600
 
 Jev ranks only the shortlist it receives. It cannot recover missing candidates or show that the available evidence is sufficient. Model suggestions are not links that already exist in the graph, and a partial snapshot stays partial. The current default may still return results when the question has no answer in the graph.
 
+Maintained by [Mike Lembo](https://myepicportfolio.com/).
+
 ## License
 
 [MIT](LICENSE) © 2026 Emlembow.
